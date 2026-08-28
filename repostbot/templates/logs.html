@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Logs · RepostStatisticsRedux{% endblock %}
+{% block content %}<div class="pagehead"><div><h1>Logs</h1><p>{{ label }} · <code>{{ log_path }}</code></p></div></div><section class="panel"><div class="loglinks"><a href="{{ url_for('logs') }}">Main log</a>{% for job in jobs %}<a href="{{ url_for('logs', job=job.id) }}">#{{ job.id }} {{ job.job_type }}</a>{% endfor %}</div><div class="logtools"><label><input type="checkbox" id="log-autorefresh" checked> Live (auto-refresh)</label><span id="log-status" class="logstatus"></span></div><pre class="log" id="log-view">{{ text if text else 'No log data yet.' }}</pre></section>{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var view = document.getElementById('log-view');
+  var toggle = document.getElementById('log-autorefresh');
+  var status = document.getElementById('log-status');
+  if (!view || !toggle) return;
+  var selected = {{ selected if selected else 'null' }};
+  var url = '{{ url_for("logs_tail") }}' + (selected ? ('?job=' + selected) : '');
+  var timer = null;
+
+  function nearBottom() {
+    return view.scrollHeight - view.scrollTop - view.clientHeight < 40;
+  }
+  function refresh() {
+    fetch(url, { cache: 'no-store' })
+      .then(function (r) { return r.text(); })
+      .then(function (text) {
+        var stick = nearBottom();
+        view.textContent = text || 'No log data yet.';
+        if (stick) view.scrollTop = view.scrollHeight;
+        var now = new Date();
+        status.textContent = 'updated ' + now.toLocaleTimeString();
+      })
+      .catch(function () { status.textContent = 'refresh failed'; });
+  }
+  function start() {
+    if (timer) return;
+    timer = setInterval(refresh, 3000);
+    refresh();
+  }
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    status.textContent = 'paused';
+  }
+  toggle.addEventListener('change', function () { toggle.checked ? start() : stop(); });
+  // Jump to the newest lines on first load.
+  view.scrollTop = view.scrollHeight;
+  if (toggle.checked) start();
+})();
+</script>
+{% endblock %}

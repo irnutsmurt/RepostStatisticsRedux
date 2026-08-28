@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Backfill · RepostStatisticsRedux{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>Backfill</h1><p>Populate image history. Backfill jobs can never post comments.</p></div></div>
+<div class="grid2">
+<section class="panel">
+<h2>Start backfill</h2>
+{% if active %}<p class="notice">A backfill is already active: job #{{ active.id }}.</p>{% endif %}
+<form method="post" class="formgrid">
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+<label>Section<select name="section"><option>top</option><option>hot</option><option>user</option></select></label>
+<label>Sort<select name="sort"><option>viral</option><option>top</option><option>time</option><option>rising</option></select></label>
+<label>Window<select name="window"><option>all</option><option>year</option><option>month</option><option>week</option><option>day</option></select></label>
+<label>Start page<input type="number" min="0" name="start_page" value="0"></label>
+<label>Pages<input type="number" min="1" max="100000" name="pages" value="5000"></label>
+<div class="formactions"><button {% if active %}disabled{% endif %}>Start backfill</button></div>
+</form>
+</section>
+<section class="panel">
+<h2>Current job</h2>
+{% if active %}
+  {% set p = active.progress_json|fromjson %}
+  <dl class="kv"><dt>Job</dt><dd>#{{ active.id }}</dd><dt>Status</dt><dd>{{ active.status }}</dd><dt>PID</dt><dd>{{ active.pid or '—' }}</dd><dt>Current page</dt><dd>{{ p.current_page if p.current_page is defined else '—' }}</dd><dt>Scanned</dt><dd>{{ p.scanned if p.scanned is defined else '—' }}</dd><dt>Inserted</dt><dd>{{ p.inserted if p.inserted is defined else '—' }}</dd><dt>Known</dt><dd>{{ p.known if p.known is defined else '—' }}</dd><dt>Reposts</dt><dd>{{ p.reposts if p.reposts is defined else '—' }}</dd><dt>Errors</dt><dd>{{ p.errors if p.errors is defined else '—' }}</dd><dt>Heartbeat</dt><dd>{{ active.heartbeat_at|epoch }}</dd></dl>
+  <form method="post" action="{{ url_for('job_stop', job_id=active.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="danger">Stop backfill</button></form>
+{% else %}<p class="muted">No active backfill.</p>{% endif %}
+</section>
+</div>
+<section class="panel"><div class="panelhead"><h2>Backfill jobs</h2><a href="{{ url_for('logs') }}">logs</a></div>
+<div class="tablewrap"><table><thead><tr><th>ID</th><th>Status</th><th>Parameters</th><th>Progress</th><th>Started</th><th>Finished</th><th></th></tr></thead><tbody>
+{% for job in jobs %}{% set a=job.args_json|fromjson %}{% set p=job.progress_json|fromjson %}<tr><td>#{{ job.id }}</td><td><span class="status {{ job.status }}">{{ job.status }}</span></td><td>{{ a.section }}/{{ a.sort }}/{{ a.window }}, page {{ a.start_page }} + {{ a.pages }}</td><td>{% if p.current_page is defined %}page {{ p.current_page }} · {{ p.scanned }} scanned · {{ p.errors }} errors{% else %}—{% endif %}</td><td>{{ job.started_at|epoch }}</td><td>{{ job.finished_at|epoch }}</td><td><a href="{{ url_for('logs', job=job.id) }}">log</a></td></tr>{% else %}<tr><td colspan="7">No backfill jobs.</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}

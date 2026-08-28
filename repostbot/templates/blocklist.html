@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Blocklist · RepostStatisticsRedux{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>Blocklist</h1><p>`blockme` requests appear here automatically.</p></div></div>
+<div class="grid2">
+<section class="panel"><h2>Block username</h2><form method="post" class="inlineform"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="kind" value="username"><input name="value" placeholder="Imgur username" required><button>Block</button></form></section>
+<section class="panel"><h2>Block account ID</h2><form method="post" class="inlineform"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="kind" value="account_id"><input name="value" type="number" min="1" placeholder="123456" required><button>Block</button></form></section>
+</div>
+<section class="panel"><h2>Username blocks</h2><div class="tablewrap"><table><thead><tr><th>Username</th><th>Added</th><th></th></tr></thead><tbody>{% for u in users %}<tr><td>{{ u.account_url }}</td><td>{{ u.created_at|epoch }}</td><td><form method="post" action="{{ url_for('blocklist_user_remove', username=u.account_url) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="small danger">Remove</button></form></td></tr>{% else %}<tr><td colspan="3">No username blocks.</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="panel"><h2>Numeric account-ID blocks</h2><div class="tablewrap"><table><thead><tr><th>Account ID</th><th></th></tr></thead><tbody>{% for a in accounts %}<tr><td>{{ a.account_id }}</td><td><form method="post" action="{{ url_for('blocklist_account_remove', account_id=a.account_id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="small danger">Remove</button></form></td></tr>{% else %}<tr><td colspan="2">No account-ID blocks.</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}

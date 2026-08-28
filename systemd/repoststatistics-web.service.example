@@ -1,0 +1,16 @@
+[Unit]
+Description=RepostStatisticsRedux LAN admin console
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=repostbot
+WorkingDirectory=/opt/repoststatistics
+ExecStart=/opt/repoststatistics/.venv/bin/python /opt/repoststatistics/app.py web
+Restart=on-failure
+RestartSec=5
+EnvironmentFile=/opt/repoststatistics/.env
+
+[Install]
+WantedBy=multi-user.target

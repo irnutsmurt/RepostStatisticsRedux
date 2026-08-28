@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}RepostStatisticsRedux{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <a class="brand" href="{{ url_for('dashboard') }}">RepostStatisticsRedux</a>
+    <span class="subtitle">LAN Admin</span>
+  </div>
+</header>
+<div class="shell">
+  <nav class="nav">
+    <a class="{% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a>
+    <a class="{% if request.endpoint == 'backfill' %}active{% endif %}" href="{{ url_for('backfill') }}">Backfill</a>
+    <a class="{% if request.endpoint == 'reposts' %}active{% endif %}" href="{{ url_for('reposts') }}">Reposts</a>
+    <a class="{% if request.endpoint == 'posts' %}active{% endif %}" href="{{ url_for('posts') }}">Indexed posts</a>
+    <a class="{% if 'blocklist' in request.endpoint %}active{% endif %}" href="{{ url_for('blocklist') }}">Blocklist</a>
+    <a class="{% if request.endpoint == 'api_status' %}active{% endif %}" href="{{ url_for('api_status') }}">API status</a>
+    <a class="{% if request.endpoint == 'logs' %}active{% endif %}" href="{{ url_for('logs') }}">Logs</a>
+    <a class="{% if 'settings' in request.endpoint %}active{% endif %}" href="{{ url_for('settings_page') }}">Settings</a>
+  </nav>
+  <main class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

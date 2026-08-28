@@ -1,0 +1,16 @@
+[Unit]
+Description=RepostStatisticsRedux bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=repostbot
+WorkingDirectory=/opt/repoststatistics
+ExecStart=/opt/repoststatistics/.venv/bin/python /opt/repoststatistics/app.py run
+Restart=on-failure
+RestartSec=15
+EnvironmentFile=/opt/repoststatistics/.env
+
+[Install]
+WantedBy=multi-user.target

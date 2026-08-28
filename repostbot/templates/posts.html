@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Indexed posts · RepostStatisticsRedux{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>Archived posts</h1><p>Every image indexed by the bot, newest first. Hover a hash for the full values.</p></div></div>
+<section class="panel">
+  {{ ui.pager('posts', pg, per_page_choices) }}
+  <div class="tablewrap"><table>
+    <thead><tr><th>Indexed</th><th>Posted</th><th>Post</th><th>User</th><th>Title</th><th>Media</th><th>Hash</th><th>Reposts</th><th>Commented</th></tr></thead>
+    <tbody>
+    {% for p in posts %}
+      <tr>
+        <td>{{ p.discovered_at|epoch }}</td>
+        <td>{{ p.posted_at|epoch }}</td>
+        <td><a target="_blank" rel="noopener" href="https://imgur.com/gallery/{{ p.gallery_id or p.id }}">{{ p.gallery_id or p.id }}{% if p.image_count and p.image_count > 1 %} #{{ p.image_index }}/{{ p.image_count }}{% endif %}</a></td>
+        <td>{{ p.account_url or '—' }}</td>
+        <td class="wide">{{ p.title }}</td>
+        <td>{{ 'animated' if p.animated else 'still' }}{% if p.width and p.height %} · {{ p.width }}×{{ p.height }}{% endif %}</td>
+        <td><code class="hash" title="sha256 {{ p.exact_hash }}&#10;ahash {{ p.ahash or '—' }}&#10;dhash_h {{ p.dhash_h or '—' }}&#10;dhash_v {{ p.dhash_v or '—' }}">{{ p.exact_hash[:12] }}… · {{ p.bit_count }}b</code></td>
+        <td>{% if p.copies and p.copies > 1 %}<strong title="{{ p.copies }} copies in archive">{{ p.copies - 1 }}</strong>{% else %}0{% endif %}</td>
+        <td>{{ p.commented_at|epoch }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="9">No indexed posts.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {{ ui.pager('posts', pg, per_page_choices) }}
+</section>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Settings · RepostStatisticsRedux{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>Settings</h1><p>Operational settings only. Imgur credentials remain in <code>.env</code>. Changes apply when a worker is next started.</p></div></div>
+<form method="post" class="panel settingsform"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+{% for s in setting_rows %}<div class="settingrow"><div><label for="{{ s.key }}">{{ s.label }}</label>{% if s.help %}<div class="help">{{ s.help }}</div>{% endif %}{% if s.overridden %}<span class="tinybadge">DB override</span>{% endif %}</div><div>
+{% if s.type == 'bool' %}<select id="{{ s.key }}" name="{{ s.key }}"><option value="true" {% if s.value == 'true' %}selected{% endif %}>true</option><option value="false" {% if s.value == 'false' %}selected{% endif %}>false</option></select>
+{% elif s.type == 'choice' %}<select id="{{ s.key }}" name="{{ s.key }}">{% for c in s.choices %}<option value="{{ c }}" {% if s.value == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+{% elif s.type == 'int' %}<input id="{{ s.key }}" name="{{ s.key }}" type="number" min="{{ s.min }}" max="{{ s.max }}" value="{{ s.value }}">
+{% else %}<input id="{{ s.key }}" name="{{ s.key }}" value="{{ s.value }}">{% endif %}
+</div></div>{% endfor %}
+<div class="formactions"><button>Save settings</button></div></form>
+<form method="post" action="{{ url_for('settings_reset') }}" class="resetform"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="secondary">Clear all DB overrides</button></form>
+{% endblock %}
