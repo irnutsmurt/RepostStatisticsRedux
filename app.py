@@ -13,6 +13,7 @@ from repostbot.config import load_settings
 from repostbot.database import RepostDatabase
 from repostbot.imgur import ImgurClient
 from repostbot.logrotate import rotate_and_prune
+from repostbot.runlock import PollerLock, lock_path
 from repostbot.service import RepostService
 from repostbot.weekly import build_weekly_post, run_weekly_post
 
@@ -243,6 +244,7 @@ def main() -> int:
     job_id = getattr(args, "job_id", None)
     update_job(db, job_id, status="running", heartbeat_at=int(time.time()))
     exit_code = 0
+    poller_lock: PollerLock | None = None
     try:
         if args.command == "backfill":
             def progress(section, page, end_page, stats):
@@ -274,6 +276,23 @@ def main() -> int:
             update_job(db, job_id, status="completed", heartbeat_at=int(time.time()),
                        finished_at=int(time.time()), exit_code=0)
             return 0
+
+        # Singleton guard: only one live poller may run at a time. A second one
+        # (e.g. the web-console "Start live bot" button clicked while the systemd
+        # bot service is already polling) would independently comment on every
+        # post, so refuse to start and exit instead of double-commenting. The
+        # lock is released automatically when this process exits.
+        lock_file = lock_path(Path(__file__).resolve().parent)
+        poller_lock = PollerLock(lock_file)
+        if not poller_lock.acquire():
+            poller_lock = None
+            msg = (f"Another live poller already holds {lock_file}; refusing to "
+                   "start a second one to avoid duplicate comments.")
+            logging.getLogger(__name__).error(msg)
+            print(msg, file=sys.stderr)
+            update_job(db, job_id, status="failed",
+                       finished_at=int(time.time()), exit_code=3)
+            return 3
 
         # Startup housekeeping: compress finished job logs and prune old
         # archives, but leave the shared main log alone so frequent restarts
@@ -347,6 +366,8 @@ def main() -> int:
         update_job(db, job_id, status="failed", finished_at=int(time.time()), exit_code=1)
         raise
     finally:
+        if poller_lock is not None:
+            poller_lock.release()
         db.close()
 
 

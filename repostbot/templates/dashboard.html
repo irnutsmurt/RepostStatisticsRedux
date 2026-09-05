@@ -5,6 +5,8 @@
   <div class="actions">
     {% if bot_job %}
       <form method="post" action="{{ url_for('job_stop', job_id=bot_job['id']) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="danger">Stop live bot</button></form>
+    {% elif poller_pid %}
+      <span class="hint">Live bot running as a service (pid {{ poller_pid }}). Manage it with systemctl on the host.</span>
     {% else %}
       <form method="post" action="{{ url_for('bot_start') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button>Start live bot</button></form>
     {% endif %}
@@ -14,7 +16,9 @@
 <div class="statusline">
   <span class="badge {{ 'warn' if settings.dry_run else 'ok' }}">{{ 'REPOST COMMENTS DRY RUN' if settings.dry_run else 'REPOST COMMENTS LIVE' }}</span>
   <span class="badge {{ 'ok' if settings.commands_enabled else '' }}">Commands {{ 'enabled' if settings.commands_enabled else 'disabled' }}</span>
-  <span class="badge {{ 'ok' if bot_job else '' }}">Bot {{ bot_job['status'] if bot_job else 'stopped' }}</span>
+  {% if bot_job %}<span class="badge ok">Bot {{ bot_job['status'] }}</span>
+  {% elif poller_pid %}<span class="badge ok">Bot running (service)</span>
+  {% else %}<span class="badge">Bot stopped</span>{% endif %}
   {% if backfill_job %}<span class="badge ok">Backfill {{ backfill_job['status'] }}</span>{% endif %}
 </div>
 

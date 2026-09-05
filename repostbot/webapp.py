@@ -16,6 +16,7 @@ from flask import Flask, Response, abort, flash, redirect, render_template, requ
 
 from .config import load_settings
 from .database import RepostDatabase
+from .runlock import lock_path, running_pid
 
 
 LOG = logging.getLogger(__name__)
@@ -400,19 +401,35 @@ def create_app() -> Flask:
             recent_jobs = db.list_web_jobs(8)
             bot_job = db.active_web_job("bot")
             backfill_job = db.active_web_job("backfill")
+            # The durable poller usually runs as the systemd service, which is not
+            # a console job. Detect it via the singleton lock so the dashboard
+            # shows "running" instead of "stopped" when the service is polling.
+            poller_pid = None if bot_job else running_pid(lock_path(project_root))
             db_size = 0
             if current.database_path != ":memory:" and Path(current.database_path).exists():
                 db_size = Path(current.database_path).stat().st_size
             return render_template(
                 "dashboard.html", settings=current, stats=stats, api=api,
                 recent_reposts=recent_reposts, recent_jobs=recent_jobs,
-                bot_job=bot_job, backfill_job=backfill_job, db_size=db_size,
+                bot_job=bot_job, backfill_job=backfill_job, poller_pid=poller_pid,
+                db_size=db_size,
             )
         finally:
             db.close()
 
     @app.post("/bot/start")
     def bot_start():
+        # A poller may already be running outside the console's job table (most
+        # commonly the systemd bot service). Starting another one here would
+        # double-comment on every post, so refuse if the singleton lock is held.
+        pid = running_pid(lock_path(project_root))
+        if pid is not None:
+            flash(
+                f"A live poller is already running (pid {pid}); not starting a "
+                "duplicate. Stop it first if you want to restart it.",
+                "warn",
+            )
+            return redirect(url_for("dashboard"))
         try:
             job_id = manager.start("bot", {}, ["run"])
             flash(f"Started live bot as job #{job_id}.", "ok")
