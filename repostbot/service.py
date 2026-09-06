@@ -8,8 +8,8 @@ from datetime import timedelta
 
 from .config import Settings
 from .database import RepostDatabase
-from .hashing import UnsupportedMediaError, signature_from_bytes
-from .imgur import ImgurApiError, ImgurClient
+from .hashing import UnsupportedMediaError, is_removed_placeholder, signature_from_bytes
+from .imgur import ImgurApiError, ImgurClient, RemovedImageError
 from .models import GalleryPost, HistoricalPost
 
 
@@ -216,6 +216,9 @@ class RepostService:
 
         try:
             data = self.client.download_image(post.image_url)
+        except RemovedImageError:
+            LOG.info("Skipping removed image for post %s (%s)", post.id, post.image_url)
+            return "skipped"
         except Exception as exc:
             LOG.error("Download failed for post %s (%s): %s", post.id, post.image_url, exc)
             raise
@@ -225,6 +228,13 @@ class RepostService:
             signature = signature_from_bytes(data, post.animated)
         except UnsupportedMediaError:
             LOG.warning("Skipping unsupported media for Imgur post %s (%s)", post.id, post.image_url)
+            return "skipped"
+
+        # Some removed images are served directly (200, no redirect) as the same
+        # placeholder. Catch those by their perceptual signature so they are never
+        # indexed and never cross-match every other removed post as a repost.
+        if not signature.animated and is_removed_placeholder(signature):
+            LOG.info("Skipping Imgur removed-image placeholder for post %s (%s)", post.id, post.image_url)
             return "skipped"
         if signature.animated:
             LOG.info(

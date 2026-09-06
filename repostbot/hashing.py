@@ -21,6 +21,25 @@ class ImageSignature:
     animated: bool
 
 
+# Imgur's 161x81 "image removed" placeholder (i.imgur.com/removed.png). Any
+# deleted image resolves to it, so every removed image hashes to these exact
+# values -- which would otherwise make them all look like reposts of each other.
+# Copies re-encoded to different bytes still share this perceptual triple, so we
+# match on the perceptual hashes (not the exact SHA-256). See is_removed_placeholder.
+REMOVED_PLACEHOLDER_AHASH = "ffff23df800ffbff80000000ffff80010001feffffffffffffff03ffdfffffff"
+REMOVED_PLACEHOLDER_DHASH_H = "2a90b560d964c943b936edb44c93957c97680a5a00844600a800c900d0002c00"
+REMOVED_PLACEHOLDER_DHASH_V = "fff07ff60000c81fffff00000000fffe00010001fffe0000fc00fc0002008400"
+
+
+def is_removed_placeholder(signature: "ImageSignature") -> bool:
+    """True when a signature matches Imgur's removed-image placeholder."""
+    return (
+        signature.ahash == REMOVED_PLACEHOLDER_AHASH
+        and signature.dhash_h == REMOVED_PLACEHOLDER_DHASH_H
+        and signature.dhash_v == REMOVED_PLACEHOLDER_DHASH_V
+    )
+
+
 def _pixels(image: Image.Image) -> list[int]:
     getter = getattr(image, "get_flattened_data", None)
     if getter is not None:

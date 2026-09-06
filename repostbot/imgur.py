@@ -17,6 +17,14 @@ class ImgurApiError(RuntimeError):
     pass
 
 
+class RemovedImageError(RuntimeError):
+    """Imgur served its 'image removed' placeholder instead of the real image.
+
+    A deleted image's URL 302-redirects to i.imgur.com/removed.png. Hashing that
+    placeholder makes every removed post look like a repost of every other, so
+    callers should skip these rather than index them."""
+
+
 class ImgurClient:
     API_BASE = "https://api.imgur.com/3"
     POST_V1_BASE = "https://api.imgur.com/post/v1"
@@ -431,6 +439,12 @@ class ImgurClient:
     def download_image(self, url: str) -> bytes:
         response = self.session.get(url, timeout=self.timeout)
         response.raise_for_status()
+        # A removed image 302-redirects to i.imgur.com/removed.png. Detect it by
+        # the final URL so we never index the placeholder as if it were content.
+        final = str(response.url or "")
+        leaf = final.rsplit("/", 1)[-1].split("?", 1)[0].lower()
+        if leaf == "removed.png" and "imgur.com" in final.lower():
+            raise RemovedImageError(f"Imgur served the removed-image placeholder for {url}")
         return response.content
 
     def mark_notification_viewed(self, notification_id: str | int) -> Any:
